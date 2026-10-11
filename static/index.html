@@ -69,6 +69,13 @@
           <span id="sb-user">—</span>
         </div>
       </div>
+      <div class="version-row">
+        <span class="pill" id="ver-pill" title="Installed version">—</span>
+        <button id="update-btn" class="btn btn-sm btn-ghost" title="Check for and install updates">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Update
+        </button>
+      </div>
       <button id="logout-btn" class="btn btn-ghost btn-block">Sign out</button>
     </div>
   </aside>
@@ -326,6 +333,33 @@
   </div>
 </div>
 
+<!-- ───────────────────────── update modal ───────────────────────── -->
+<div class="modal hidden" id="update-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Update Server Console</h3>
+      <div class="modal-actions">
+        <span class="pill" id="up-state">—</span>
+        <button class="icon-btn" data-close-modal="update-modal">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <dl class="kv" id="up-info"></dl>
+      <div id="up-incoming-wrap" class="hidden">
+        <h4 class="section-title">Incoming changes</h4>
+        <div id="up-incoming" class="list"></div>
+      </div>
+      <div class="up-actions">
+        <button class="btn" id="up-check">Check again</button>
+        <button class="btn btn-primary" id="up-run">Update now</button>
+        <button class="btn" id="up-clear-log">Clear log</button>
+      </div>
+      <h4 class="section-title">Update log</h4>
+      <div class="log-output" id="up-log">No update has been run yet.</div>
+    </div>
+  </div>
+</div>
+
 <div id="toasts" class="toasts"></div>
 
 <script src="/static/vendor/xterm.js"></script>
@@ -339,6 +373,7 @@
 <script src="/static/js/processes.js"></script>
 <script src="/static/js/services.js"></script>
 <script src="/static/js/files.js"></script>
+<script src="/static/js/update.js"></script>
 <script src="/static/js/app.js"></script>
 </body>
 </html>

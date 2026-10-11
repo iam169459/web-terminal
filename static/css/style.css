@@ -140,6 +140,17 @@ a { color: var(--accent); text-decoration: none; }
 .host-mini-text { display: flex; flex-direction: column; overflow: hidden; }
 .host-mini-text strong { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .host-mini-text span { font-size: 11px; color: var(--faint); }
+.version-row { display: flex; align-items: center; gap: 8px; }
+.version-row .pill { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: center; font-family: var(--mono); }
+.version-row .btn { flex: none; }
+.version-row .btn svg { opacity: .8; }
+.section-title {
+  margin: 18px 0 9px; font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.up-actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
+#up-log { margin-top: 0; max-height: 34vh; }
+#up-incoming { max-height: 190px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--faint); }
 .dot-ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(46, 204, 143, .16); animation: pulse 2.4s infinite; }
 .dot-bad { background: var(--danger); box-shadow: 0 0 0 3px rgba(255, 92, 108, .16); }

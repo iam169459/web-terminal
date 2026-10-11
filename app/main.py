@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import config, files, metrics, processes, security, services, terminal
+from . import config, files, metrics, processes, security, services, terminal, updater
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("webui")
@@ -194,6 +194,33 @@ def post_service_action(unit: str, body: ServiceActionBody, _=Depends(require_au
         return services.service_action(unit, body.action)
     except (RuntimeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+# --------------------------------------------------------------------------- self-update
+@app.get("/api/update/status")
+def get_update_status(_=Depends(require_auth)):
+    return updater.status()
+
+
+@app.post("/api/update/check")
+def post_update_check(_=Depends(require_auth)):
+    updater.check_for_updates(fetch=True)
+    # Same shape as /api/update/status so the client can render either response.
+    return updater.status()
+
+
+@app.post("/api/update/run")
+def post_update_run(_=Depends(require_auth)):
+    try:
+        return updater.run_update()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/api/update/clear-log")
+def post_update_clear_log(_=Depends(require_auth)):
+    updater.clear_log()
+    return {"ok": True}
 
 
 # --------------------------------------------------------------------------- files

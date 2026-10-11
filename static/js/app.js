@@ -36,6 +36,7 @@ const App = (() => {
     UI.$("#sb-host").textContent = session.host || location.hostname;
     UI.$("#sb-user").textContent = `${session.username} · ${session.shell}`;
     Dashboard.init();
+    Updater.refreshBadge();
     route(true);
     connectMetrics();
   }
