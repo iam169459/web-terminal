@@ -1,0 +1,21 @@
+[Unit]
+Description=Headless Server Web UI
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/home/%i/Desktop/web-terminal
+ExecStart=/home/%i/Desktop/web-terminal/.venv/bin/python -m app.main
+Restart=on-failure
+RestartSec=3
+
+# Optional hardening - uncomment to restrict what the UI can touch.
+# Environment=WEBUI_FILE_ROOT=/
+# Environment=WEBUI_HOST=127.0.0.1
+# Environment=WEBUI_PORT=8080
+# Environment=WEBUI_PASSWORD=change-me
+# Environment=WEBUI_SYSTEMCTL_SUDO=1
+
+[Install]
+WantedBy=default.target

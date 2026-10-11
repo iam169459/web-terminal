@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Server Console</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
+<link rel="stylesheet" href="/static/vendor/xterm.css">
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- ───────────────────────── login ───────────────────────── -->
+<div id="login-screen" class="login-screen hidden">
+  <form id="login-form" class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+    </div>
+    <h1>Server Console</h1>
+    <p class="login-sub">Sign in to manage this machine</p>
+    <label>Username<input id="login-user" type="text" autocomplete="username" spellcheck="false" placeholder="admin" required></label>
+    <label>Password<input id="login-pass" type="password" autocomplete="current-password" required></label>
+    <p id="login-error" class="login-error hidden"></p>
+    <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+  </form>
+</div>
+
+<!-- ───────────────────────── app shell ───────────────────────── -->
+<div id="app" class="app hidden">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      </span>
+      <span class="brand-text">Server Console</span>
+    </div>
+
+    <nav class="nav">
+      <a href="#/dashboard" data-nav="dashboard" class="nav-item">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="#/terminal" data-nav="terminal" class="nav-item">
+        <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <span>Terminal</span>
+      </a>
+      <a href="#/processes" data-nav="processes" class="nav-item">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+        <span>Processes</span>
+        <span class="nav-badge" id="nav-proc-count"></span>
+      </a>
+      <a href="#/services" data-nav="services" class="nav-item">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Services</span>
+      </a>
+      <a href="#/files" data-nav="files" class="nav-item">
+        <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span>Files</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="host-mini">
+        <span class="dot dot-ok" id="sb-conn"></span>
+        <div class="host-mini-text">
+          <strong id="sb-host">—</strong>
+          <span id="sb-user">—</span>
+        </div>
+      </div>
+      <button id="logout-btn" class="btn btn-ghost btn-block">Sign out</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button id="menu-toggle" class="icon-btn menu-toggle" title="Menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <h2 id="page-title">Dashboard</h2>
+      <div class="topbar-right">
+        <span class="chip" id="tb-uptime" title="Uptime">—</span>
+        <span class="chip chip-accent" id="tb-load" title="Load average">—</span>
+        <span class="clock" id="tb-clock">--:--:--</span>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- ══════════ dashboard ══════════ -->
+      <section id="view-dashboard" class="view">
+        <div class="cards cards-hero">
+          <article class="card card-host">
+            <div class="card-head"><h3>System</h3><span class="pill" id="d-os">—</span></div>
+            <div class="host-grid">
+              <div><span class="k">Hostname</span><span class="v" id="d-hostname">—</span></div>
+              <div><span class="k">Kernel</span><span class="v" id="d-kernel">—</span></div>
+              <div><span class="k">Architecture</span><span class="v" id="d-arch">—</span></div>
+              <div><span class="k">Booted</span><span class="v" id="d-boot">—</span></div>
+            </div>
+          </article>
+
+          <article class="card card-gauge">
+            <h3>CPU</h3>
+            <canvas class="gauge" id="g-cpu"></canvas>
+            <div class="gauge-center"><strong id="d-cpu-pct">0%</strong><span id="d-cpu-cores">—</span></div>
+            <div class="card-foot" id="d-cpu-freq">—</div>
+          </article>
+
+          <article class="card card-gauge">
+            <h3>Memory</h3>
+            <canvas class="gauge" id="g-mem"></canvas>
+            <div class="gauge-center"><strong id="d-mem-pct">0%</strong><span id="d-mem-used">—</span></div>
+            <div class="card-foot" id="d-mem-swap">—</div>
+          </article>
+
+          <article class="card card-gauge" id="card-battery">
+            <h3>Battery <span class="pill" id="d-bat-state">—</span></h3>
+            <canvas class="gauge" id="g-bat"></canvas>
+            <div class="gauge-center"><strong id="d-bat-pct">—</strong><span id="d-bat-icon">🔌</span></div>
+            <div class="card-foot" id="d-bat-time">—</div>
+          </article>
+
+          <article class="card card-gauge">
+            <h3>Temp <span class="pill" id="d-temp-chip">—</span></h3>
+            <canvas class="gauge" id="g-temp"></canvas>
+            <div class="gauge-center"><strong id="d-temp-pct">—</strong><span id="d-temp-label">—</span></div>
+            <div class="card-foot" id="d-temp-crit">—</div>
+          </article>
+        </div>
+
+        <div class="cards cards-charts">
+          <article class="card card-wide">
+            <div class="card-head"><h3>CPU history</h3><div class="legend"><span class="lg lg-1">total</span><span class="lg lg-2">load/cores</span></div></div>
+            <canvas class="chart" id="ch-cpu"></canvas>
+          </article>
+          <article class="card card-wide">
+            <div class="card-head"><h3>Memory history</h3><div class="legend"><span class="lg lg-1">used</span><span class="lg lg-2">swap</span></div></div>
+            <canvas class="chart" id="ch-mem"></canvas>
+          </article>
+          <article class="card card-wide">
+            <div class="card-head"><h3>Network throughput</h3><div class="legend"><span class="lg lg-2">↓ in</span><span class="lg lg-1">↑ out</span></div></div>
+            <canvas class="chart" id="ch-net"></canvas>
+          </article>
+        </div>
+
+        <div class="cards cards-detail">
+          <article class="card">
+            <div class="card-head"><h3>CPU per core</h3><span class="pill" id="d-load">—</span></div>
+            <div id="d-cores-bars" class="core-bars"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><h3>Disks</h3><span class="pill" id="d-disk-count">—</span></div>
+            <div id="d-disks" class="list"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><h3>Network</h3><span class="pill" id="d-net-total">—</span></div>
+            <div id="d-net" class="list"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><h3>Temperatures</h3><span class="pill" id="d-temp-count">—</span></div>
+            <div id="d-temps" class="list"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><h3>Fans</h3><span class="pill" id="d-fan-count">—</span></div>
+            <div id="d-fans" class="list"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><h3>Top processes</h3><span class="pill" id="d-proc-count">—</span></div>
+            <div id="d-top-procs" class="list"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ══════════ terminal ══════════ -->
+      <section id="view-terminal" class="view hidden">
+        <div class="card term-card">
+          <div class="card-head">
+            <h3>Terminal</h3>
+            <div class="term-actions">
+              <span class="pill" id="term-status">disconnected</span>
+              <button class="btn btn-sm" id="term-clear">Clear</button>
+              <button class="btn btn-sm" id="term-reconnect">Reconnect</button>
+              <button class="btn btn-sm" id="term-fullscreen">Fullscreen</button>
+            </div>
+          </div>
+          <div id="terminal" class="term"></div>
+        </div>
+      </section>
+
+      <!-- ══════════ processes ══════════ -->
+      <section id="view-processes" class="view hidden">
+        <div class="card">
+          <div class="card-head toolbar">
+            <h3>Processes <span class="pill" id="p-count">—</span></h3>
+            <div class="toolbar-actions">
+              <input id="p-search" class="input" type="search" placeholder="Filter by name or command…" spellcheck="false">
+              <label class="switch"><input type="checkbox" id="p-auto" checked><span>Auto-refresh</span></label>
+              <button class="btn btn-sm" id="p-refresh">Refresh</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="p-table">
+              <thead>
+                <tr>
+                  <th data-sort="pid">PID</th>
+                  <th data-sort="name">Name</th>
+                  <th data-sort="user">User</th>
+                  <th data-sort="cpu" class="num">CPU %</th>
+                  <th data-sort="mem" class="num">MEM %</th>
+                  <th class="num">RSS</th>
+                  <th data-sort="status">Status</th>
+                  <th>Command</th>
+                  <th class="actions-col">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="p-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════ services ══════════ -->
+      <section id="view-services" class="view hidden">
+        <div class="card">
+          <div class="card-head toolbar">
+            <h3>Services <span class="pill" id="s-count">—</span></h3>
+            <div class="toolbar-actions">
+              <span class="pill pill-ok" id="s-running">— running</span>
+              <span class="pill pill-danger" id="s-failed">— failed</span>
+              <input id="s-search" class="input" type="search" placeholder="Filter units…" spellcheck="false">
+              <button class="btn btn-sm" id="s-refresh">Refresh</button>
+            </div>
+          </div>
+          <div id="s-sudo-note" class="notice hidden"></div>
+          <div class="table-wrap">
+            <table class="table" id="s-table">
+              <thead>
+                <tr>
+                  <th>Unit</th>
+                  <th>Active</th>
+                  <th>Load</th>
+                  <th>On boot</th>
+                  <th>Description</th>
+                  <th class="actions-col">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="s-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════ files ══════════ -->
+      <section id="view-files" class="view hidden">
+        <div class="files-layout">
+          <aside class="card bookmarks">
+            <div class="card-head"><h3>Places</h3></div>
+            <div id="f-bookmarks" class="list"></div>
+          </aside>
+
+          <div class="card files-main">
+            <div class="card-head toolbar">
+              <div class="breadcrumb" id="f-crumbs"></div>
+              <div class="toolbar-actions">
+                <button class="btn btn-sm" id="f-up" title="Parent directory">⬆ Up</button>
+                <button class="btn btn-sm" id="f-mkdir">New folder</button>
+                <button class="btn btn-sm" id="f-upload">Upload</button>
+                <button class="btn btn-sm" id="f-refresh">Refresh</button>
+              </div>
+            </div>
+            <input type="file" id="f-upload-input" class="hidden" multiple>
+            <div class="table-wrap">
+              <table class="table" id="f-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th class="num">Size</th>
+                    <th>Owner</th>
+                    <th>Mode</th>
+                    <th>Modified</th>
+                    <th class="actions-col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="f-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ───────────────────────── editor modal ───────────────────────── -->
+<div class="modal hidden" id="editor-modal">
+  <div class="modal-card modal-editor">
+    <div class="modal-head">
+      <h3 id="ed-title">Edit file</h3>
+      <div class="modal-actions">
+        <span class="pill" id="ed-meta"></span>
+        <button class="btn btn-sm btn-primary" id="ed-save">Save</button>
+        <button class="icon-btn" data-close-modal="editor-modal">✕</button>
+      </div>
+    </div>
+    <textarea id="ed-text" class="editor" spellcheck="false" wrap="off"></textarea>
+    <div class="modal-foot"><span id="ed-status"></span></div>
+  </div>
+</div>
+
+<!-- ───────────────────────── generic modal ───────────────────────── -->
+<div class="modal hidden" id="generic-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="gm-title">Details</h3>
+      <button class="icon-btn" data-close-modal="generic-modal">✕</button>
+    </div>
+    <div class="modal-body" id="gm-body"></div>
+  </div>
+</div>
+
+<div id="toasts" class="toasts"></div>
+
+<script src="/static/vendor/xterm.js"></script>
+<script src="/static/vendor/xterm-addon-fit.js"></script>
+<script src="/static/vendor/xterm-addon-web-links.js"></script>
+<script src="/static/js/util.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/dashboard.js"></script>
+<script src="/static/js/terminal.js"></script>
+<script src="/static/js/processes.js"></script>
+<script src="/static/js/services.js"></script>
+<script src="/static/js/files.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

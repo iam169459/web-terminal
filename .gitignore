@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Runtime state and generated secrets (these live in ~/.local/share/webui)
+*.key
+password
+
+# Local tooling / editor state
+.idea/
+.vscode/
+.DS_Store
+
+# Logs
+*.log
+nohup.out
