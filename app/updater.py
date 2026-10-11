@@ -222,8 +222,9 @@ fi
 
 say "starting the updated server..."
 cd "$DIR" || { say "ERROR: cannot cd into $DIR"; exit 1; }
-nohup "$PY" -m "$MODULE" >>"$LOG" 2>&1 &
-say "done - new server pid $!"
+SRVLOG="$(dirname "$4")/server.log"
+nohup "$PY" -m "$MODULE" >>"$SRVLOG" 2>&1 &
+say "done - new server pid $! (logging to $SRVLOG)"
 '''
 
 
