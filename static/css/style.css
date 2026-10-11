@@ -331,7 +331,7 @@ a { color: var(--accent); text-decoration: none; }
 }
 .kv { display: grid; grid-template-columns: 120px 1fr; gap: 7px 14px; font-size: 13px; }
 .kv dt { color: var(--muted); }
-.kv dd { margin: 0; font-family: var(--mono); word-break: break-all; }
+.kv dd { margin: 0; font-family: var(--mono); overflow-wrap: break-word; word-break: normal; }
 .log-output {
   padding: 12px; background: #05070c; border: 1px solid var(--border-2); border-radius: 8px;
   font-family: var(--mono); font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;

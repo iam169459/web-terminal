@@ -21,6 +21,7 @@ with no internet access.
 | **Processes** | Sortable, filterable process table with SIGTERM / SIGKILL / SIGSTOP |
 | **Services** | systemd units with start / stop / restart / enable / disable and journal logs |
 | **Files** | Browse, upload, download, edit, chmod, rename and delete, with quick bookmarks |
+| **Update** | Pull the latest code from GitHub, reinstall dependencies and restart the server |
 
 ### Sensors
 
@@ -63,6 +64,48 @@ mkdir -p ~/.config/systemd/user
 cp webui.service ~/.config/systemd/user/
 systemctl --user enable --now webui.service
 loginctl enable-linger $USER     # keep it running after you log out
+```
+
+---
+
+## Self-update
+
+The sidebar shows the installed commit and lights up when upstream has new commits.
+Clicking **Update** opens a panel with the current version, the incoming commits and a
+live log of the update.
+
+**Update now** does three things:
+
+1. `git fetch` and `git reset --hard origin/<branch>` — the tree is forced to match
+   upstream, so **local modifications are discarded**. The previous commit SHA is
+   logged so you can roll back with `git reset --hard <sha>`.
+2. `pip install --upgrade -r requirements.txt`
+3. Restart the server.
+
+The work runs in a **detached helper process**, not inside the request handler — the
+server has to kill and restart itself, and doing that mid-response would drop the
+connection. The helper waits for this process to exit, updates the tree, then starts
+the server again. The browser watches the log across the restart and reloads once the
+new code is serving.
+
+Restart behaviour depends on how you launched it:
+
+- **Under systemd** (`webui.service`, which uses `Restart=always`) the process exits
+  cleanly and systemd starts the updated code.
+- **Otherwise** the helper relaunches it with `nohup`, logging to
+  `~/.local/share/webui/server.log`.
+
+Requirements: the install must be a git clone with an `origin` remote, and the user
+running the server must be able to write to the install directory. It works whether or
+not the process has root — a permission failure just shows up in the log.
+
+To roll back:
+
+```bash
+cd ~/Desktop/web-terminal
+git log --oneline            # find the commit you want
+git reset --hard <sha>
+systemctl --user restart webui   # or just restart the process
 ```
 
 ---
@@ -132,6 +175,7 @@ app/
   services.py    systemctl / journalctl wrapper with optional sudo
   files.py       path-jailed file manager
   terminal.py    PTY sessions over websocket
+  updater.py     self-update via a detached helper process
   main.py        FastAPI app, routes, auth middleware
 static/
   index.html     single-page shell
@@ -152,6 +196,10 @@ WS   /ws/terminal?token=…&cols=…&rows=…
 GET  /api/processes                   POST /api/processes/{pid}/signal
 GET  /api/services                    GET  /api/services/{unit}/logs
 POST /api/services/{unit}/action      {action: start|stop|restart|enable|disable|…}
+GET  /api/update/status               -> version, upstream, behind count, running state, log
+POST /api/update/check                -> git fetch and re-read upstream
+POST /api/update/run                  -> start a detached self-update, then restart
+POST /api/update/clear-log
 GET  /api/files?path=…                GET  /api/files/read?path=…
 GET  /api/files/download?path=…       POST /api/files/write|mkdir|delete|rename|chmod|chown
 POST /api/files/upload                (multipart: path, file)
