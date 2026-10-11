@@ -273,8 +273,12 @@ def run_update() -> Dict[str, Any]:
         STATE["started_pid"] = proc.pid
         STATE["phase"] = "running"
 
+    # Exit once the response has been flushed. The helper is waiting for us to
+    # stop, and under systemd this clean exit is what lets the unit restart us.
+    threading.Timer(2.0, os._exit, args=(0,)).start()
+
     # The helper outlives us, so the temp script is safe to remove shortly after.
-    threading.Timer(5.0, lambda: script_path.unlink(missing_ok=True)).start()
+    threading.Timer(6.0, lambda: script_path.unlink(missing_ok=True)).start()
     return {
         "started": True,
         "helper_pid": proc.pid,

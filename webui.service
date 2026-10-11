@@ -7,7 +7,8 @@ Type=simple
 User=%i
 WorkingDirectory=/home/%i/Desktop/web-terminal
 ExecStart=/home/%i/Desktop/web-terminal/.venv/bin/python -m app.main
-Restart=on-failure
+# "always" so a self-update (which exits cleanly) is restarted too.
+Restart=always
 RestartSec=3
 
 # Optional hardening - uncomment to restrict what the UI can touch.
