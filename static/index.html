@@ -11,23 +11,8 @@
 </head>
 <body>
 
-<!-- ───────────────────────── login ───────────────────────── -->
-<div id="login-screen" class="login-screen hidden">
-  <form id="login-form" class="login-card">
-    <div class="login-logo">
-      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-    </div>
-    <h1>Server Console</h1>
-    <p class="login-sub">Sign in to manage this machine</p>
-    <label>Username<input id="login-user" type="text" autocomplete="username" spellcheck="false" placeholder="admin" required></label>
-    <label>Password<input id="login-pass" type="password" autocomplete="current-password" required></label>
-    <p id="login-error" class="login-error hidden"></p>
-    <button type="submit" class="btn btn-primary btn-block">Sign in</button>
-  </form>
-</div>
-
 <!-- ───────────────────────── app shell ───────────────────────── -->
-<div id="app" class="app hidden">
+<div id="app" class="app">
 
   <aside class="sidebar" id="sidebar">
     <div class="brand">
@@ -76,7 +61,6 @@
           Update
         </button>
       </div>
-      <button id="logout-btn" class="btn btn-ghost btn-block">Sign out</button>
     </div>
   </aside>
 

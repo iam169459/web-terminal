@@ -17,63 +17,24 @@ const App = (() => {
   /* ── boot ───────────────────────────────────────────────────── */
   function boot() {
     UI.wireCloseButtons();
-    wireLogin();
     wireNavigation();
     wireTopbar();
-    API.onUnauthorized(showLogin);
-    if (API.hasToken()) start(); else showLogin();
+    start();
   }
 
   async function start() {
     try {
       session = await API.get("/api/me");
     } catch (err) {
-      showLogin();
-      return;
+      session = {};
     }
     UI.$("#app").classList.remove("hidden");
-    UI.$("#login-screen").classList.add("hidden");
     UI.$("#sb-host").textContent = session.host || location.hostname;
-    UI.$("#sb-user").textContent = `${session.username} · ${session.shell}`;
+    UI.$("#sb-user").textContent = `${session.username || "local"} · ${session.shell || ""}`;
     Dashboard.init();
     Updater.refreshBadge();
     route(true);
     connectMetrics();
-  }
-
-  function showLogin() {
-    UI.$("#app").classList.add("hidden");
-    UI.$("#login-screen").classList.remove("hidden");
-    UI.$("#login-pass").value = "";
-    setTimeout(() => UI.$("#login-user").focus(), 50);
-  }
-
-  function wireLogin() {
-    UI.$("#login-form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const errorBox = UI.$("#login-error");
-      errorBox.classList.add("hidden");
-      try {
-        const res = await API.post("/api/login", {
-          username: UI.$("#login-user").value.trim(),
-          password: UI.$("#login-pass").value,
-        });
-        API.setToken(res.token);
-        await start();
-      } catch (err) {
-        errorBox.textContent = err.message === "Not authenticated" ? "Invalid username or password" : err.message;
-        errorBox.classList.remove("hidden");
-      }
-    });
-
-    UI.$("#logout-btn").addEventListener("click", () => {
-      API.setToken("");
-      if (metricsSocket) { metricsSocket.onclose = null; metricsSocket.close(); metricsSocket = null; }
-      TerminalView.dispose();
-      Processes.stopTimer();
-      UI.toast("Signed out", "info");
-      showLogin();
-    });
   }
 
   /* ── routing ────────────────────────────────────────────────── */
@@ -132,7 +93,6 @@ const App = (() => {
     };
     metricsSocket.onclose = () => {
       UI.$("#sb-conn").className = "dot dot-bad";
-      if (!API.hasToken()) return;
       setTimeout(connectMetrics, reconnectDelay);
       reconnectDelay = Math.min(reconnectDelay * 1.8, 15000);
     };

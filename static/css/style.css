@@ -47,37 +47,6 @@ a { color: var(--accent); text-decoration: none; }
 ::-webkit-scrollbar-thumb:hover { background: #3a4763; background-clip: content-box; }
 ::-webkit-scrollbar-track { background: transparent; }
 
-/* ─────────────── login ─────────────── */
-.login-screen {
-  position: fixed; inset: 0; z-index: 100;
-  display: grid; place-items: center; padding: 24px;
-  background: radial-gradient(900px 600px at 50% 0%, rgba(79,140,255,.14), transparent 60%), var(--bg);
-}
-.login-card {
-  width: 100%; max-width: 380px; padding: 34px 32px;
-  background: linear-gradient(180deg, var(--surface-2), var(--surface));
-  border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow);
-}
-.login-logo {
-  width: 62px; height: 62px; display: grid; place-items: center; margin-bottom: 16px;
-  color: #fff; border-radius: 16px;
-  background: linear-gradient(140deg, var(--accent), var(--accent-2));
-  box-shadow: 0 10px 26px rgba(79, 140, 255, .34);
-}
-.login-card h1 { font-size: 22px; }
-.login-sub { margin: 6px 0 22px; color: var(--muted); font-size: 13px; }
-.login-card label { display: block; margin-bottom: 14px; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
-.login-card input {
-  display: block; width: 100%; margin-top: 6px; padding: 11px 13px;
-  background: var(--bg-2); border: 1px solid var(--border-2); border-radius: var(--radius-sm);
-  color: var(--text); outline: none; transition: border-color .15s, box-shadow .15s;
-}
-.login-card input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79, 140, 255, .18); }
-.login-error {
-  margin: 0 0 14px; padding: 9px 12px; font-size: 12.5px; color: #ffd7db;
-  background: rgba(255, 92, 108, .12); border: 1px solid rgba(255, 92, 108, .3); border-radius: var(--radius-sm);
-}
-
 /* ─────────────── buttons & inputs ─────────────── */
 .btn {
   display: inline-flex; align-items: center; gap: 6px; justify-content: center;

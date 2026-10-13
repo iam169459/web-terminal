@@ -120,8 +120,7 @@ const Files = (() => {
       if (act === "open") return navigate(path);
       if (act === "edit") return openEditor(path);
       if (act === "download") {
-        const token = API.getToken();
-        window.location.href = `/api/files/download?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token)}`;
+        window.location.href = `/api/files/download?path=${encodeURIComponent(path)}`;
         return;
       }
       if (act === "chmod") {

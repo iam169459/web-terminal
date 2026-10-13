@@ -4,7 +4,8 @@ A self-hosted web UI for a headless Linux server — no desktop environment requ
 
 It gives you a browser-based terminal, live system metrics (including **battery,
 temperatures and fans**), a process manager, a systemd service manager and a file
-manager with an in-browser editor, all behind a single login.
+manager with an in-browser editor. There is no login — it binds to `127.0.0.1` by
+default, so only you on the local machine can reach it.
 
 Built with **FastAPI + psutil** on the backend and **vanilla JS + xterm.js** on the
 frontend. `xterm.js` is vendored into `static/vendor/`, so the UI works on machines
@@ -41,21 +42,20 @@ Everything is read through `psutil` and degrades gracefully:
 ./run.sh
 ```
 
-That creates a virtualenv, installs dependencies and starts the server. On first run
-it generates a random password and prints it in the startup banner:
+That creates a virtualenv, installs dependencies and starts the server:
 
 ```
   ┌──────────────────────────────────────────────────┐
   │  Headless Server Web UI                          │
   ├──────────────────────────────────────────────────┤
-  │  URL        http://0.0.0.0:8080                  │
-  │  Username   admin                                │
-  │  Password   aB3dEf7hJk9mNp2q                     │
+  │  URL        http://127.0.0.1:8080                │
+  │  File root  /                                    │
   └──────────────────────────────────────────────────┘
 ```
 
-The password is stored in `~/.local/share/webui/password` (mode `0600`) so it
-survives restarts. Open `http://<server-ip>:8080` and sign in.
+Open `http://127.0.0.1:8080` — no username or password needed. To reach it from
+another machine, bind to your LAN address (`WEBUI_HOST=0.0.0.0 ./run.sh`), but
+remember there is no authentication then.
 
 ### Run as a service
 
@@ -116,14 +116,12 @@ Every option is an environment variable.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WEBUI_HOST` | `0.0.0.0` | Bind address |
+| `WEBUI_HOST` | `127.0.0.1` | Bind address (`0.0.0.0` exposes it to the network — there is no login) |
 | `WEBUI_PORT` | `8080` | Port |
-| `WEBUI_USER` | `admin` | Login username |
-| `WEBUI_PASSWORD` | *(generated)* | Login password |
+| `WEBUI_USER` | `admin` | Display name shown in the sidebar |
 | `WEBUI_FILE_ROOT` | `/` | Jail the file manager to this directory (e.g. `/srv`) |
 | `WEBUI_SHELL` | `/bin/bash` | Shell spawned for each terminal session |
 | `WEBUI_METRICS_INTERVAL` | `2.0` | Dashboard push interval in seconds |
-| `WEBUI_TOKEN_TTL` | `43200` | Session token lifetime in seconds (12h) |
 | `WEBUI_MAX_EDIT_SIZE` | `2097152` | Largest file the editor will open, in bytes |
 | `WEBUI_SSL_CERT` / `WEBUI_SSL_KEY` | *(unset)* | Serve over HTTPS by pointing at a cert and key |
 | `WEBUI_SYSTEMCTL_SUDO` | `auto` | Set to `0` to never use sudo for systemctl |
@@ -131,7 +129,7 @@ Every option is an environment variable.
 Example with a jail and TLS:
 
 ```bash
-WEBUI_FILE_ROOT=/srv WEBUI_PASSWORD=hunter2 \
+WEBUI_FILE_ROOT=/srv \
 WEBUI_SSL_CERT=/etc/ssl/certs/fullchain.pem WEBUI_SSL_KEY=/etc/ssl/private/privkey.pem \
 ./run.sh
 ```
@@ -153,14 +151,14 @@ default `/` there is no jail.
 
 ## Security notes
 
-- Sessions are HMAC-signed tokens; the signing key lives in
-  `~/.local/share/webui/secret.key` and is generated per install.
-- Unauthenticated requests to `/api/*` and both websockets are rejected.
-- The terminal runs as **the same user as the server**. Anyone who signs in gets a
-  shell with that user's privileges, so use a strong password.
-- The server speaks plain HTTP by default. For anything beyond a trusted LAN, put it
-  behind a reverse proxy (nginx/Caddy with TLS) or set `WEBUI_SSL_CERT` /
-  `WEBUI_SSL_KEY`.
+- **There is no authentication.** Anyone who can reach the HTTP port gets a shell
+  with the server user's privileges. The default bind address is `127.0.0.1`, so
+  only processes on the same machine can connect.
+- If you set `WEBUI_HOST=0.0.0.0`, put the UI behind something that authenticates
+  (an SSH tunnel, a reverse proxy with basic auth/TLS, a VPN like WireGuard).
+- The terminal runs as **the same user as the server**.
+- Plain HTTP by default. For anything beyond localhost, use `WEBUI_SSL_CERT` /
+  `WEBUI_SSL_KEY` or a reverse proxy (nginx/Caddy with TLS).
 
 ---
 
@@ -168,15 +166,14 @@ default `/` there is no jail.
 
 ```
 app/
-  config.py      environment-driven settings, generated secrets
-  security.py    HMAC token auth, password check
+  config.py      environment-driven settings
   metrics.py     psutil collectors: cpu, memory, disks, network, battery, temps, fans
   processes.py   process listing and signalling
   services.py    systemctl / journalctl wrapper with optional sudo
   files.py       path-jailed file manager
   terminal.py    PTY sessions over websocket
   updater.py     self-update via a detached helper process
-  main.py        FastAPI app, routes, auth middleware
+  main.py        FastAPI app, routes
 static/
   index.html     single-page shell
   css/style.css  dark theme
@@ -189,10 +186,10 @@ static/
 Interactive docs are served at `/api/docs` (Swagger UI).
 
 ```
-POST /api/login                       -> {token}
-GET  /api/metrics                     -> full snapshot
-WS   /ws/metrics?token=…              -> snapshot every WEBUI_METRICS_INTERVAL
-WS   /ws/terminal?token=…&cols=…&rows=…
+GET  /api/me                         -> username, file root, shell, host, port
+GET  /api/metrics                    -> full snapshot
+WS   /ws/metrics                     -> snapshot every WEBUI_METRICS_INTERVAL
+WS   /ws/terminal?cols=…&rows=…
 GET  /api/processes                   POST /api/processes/{pid}/signal
 GET  /api/services                    GET  /api/services/{unit}/logs
 POST /api/services/{unit}/action      {action: start|stop|restart|enable|disable|…}

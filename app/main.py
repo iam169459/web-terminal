@@ -7,46 +7,17 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from fastapi import Body, Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile, WebSocket
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile, WebSocket
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import config, files, metrics, processes, security, services, terminal, updater
+from . import config, files, metrics, processes, services, terminal, updater
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("webui")
 
 app = FastAPI(title="Headless Server Web UI", version="1.0.0", docs_url="/api/docs", redoc_url=None)
-
-
-# --------------------------------------------------------------------------- auth
-class LoginBody(BaseModel):
-    username: str = ""
-    password: str = ""
-
-
-PUBLIC_PATHS = {"/api/login", "/api/health", "/favicon.ico"}
-
-
-def require_auth(request: Request) -> None:
-    token = security.extract_token(
-        request.headers.get("authorization"), request.query_params.get("token")
-    )
-    if not security.verify_token(token):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-
-@app.middleware("http")
-async def auth_middleware(request: Request, call_next):
-    path = request.url.path
-    if path.startswith("/api/") and path not in PUBLIC_PATHS:
-        token = security.extract_token(
-            request.headers.get("authorization"), request.query_params.get("token")
-        )
-        if not security.verify_token(token):
-            return JSONResponse({"detail": "Not authenticated"}, status_code=401)
-    return await call_next(request)
 
 
 @app.exception_handler(files.PathError)
@@ -74,23 +45,14 @@ async def value_error_handler(request: Request, exc: ValueError):
     return JSONResponse({"detail": str(exc)}, status_code=400)
 
 
-# --------------------------------------------------------------------------- auth api
-@app.post("/api/login")
-def login(body: LoginBody):
-    if not security.verify_password(body.password) or (
-        body.username and body.username != config.USERNAME
-    ):
-        raise HTTPException(status_code=401, detail="Invalid username or password")
-    return {"token": security.issue_token(), "username": config.USERNAME, "ttl": config.TOKEN_TTL}
-
-
+# --------------------------------------------------------------------------- core api
 @app.get("/api/health")
 def health():
     return {"ok": True}
 
 
 @app.get("/api/me")
-def me(_=Depends(require_auth)):
+def me():
     return {
         "username": config.USERNAME,
         "root": str(config.FILE_ROOT),
@@ -102,21 +64,17 @@ def me(_=Depends(require_auth)):
 
 # --------------------------------------------------------------------------- metrics
 @app.get("/api/metrics")
-def metrics_snapshot(_=Depends(require_auth)):
+def metrics_snapshot():
     return metrics.collect()
 
 
 @app.get("/api/overview")
-def overview(_=Depends(require_auth)):
+def overview():
     return {"overview": metrics.overview(), "battery": metrics.battery()}
 
 
 @app.websocket("/ws/metrics")
 async def metrics_websocket(websocket: WebSocket):
-    token = security.extract_token(None, websocket.query_params.get("token"))
-    if not security.verify_token(token):
-        await websocket.close(code=4401)
-        return
     await websocket.accept()
     try:
         while True:
@@ -129,10 +87,7 @@ async def metrics_websocket(websocket: WebSocket):
 # --------------------------------------------------------------------------- terminal
 @app.websocket("/ws/terminal")
 async def terminal_websocket(websocket: WebSocket):
-    token = security.extract_token(None, websocket.query_params.get("token"))
-    if not security.verify_token(token):
-        await websocket.close(code=4401)
-        return
+    await websocket.accept()
     await terminal.handle_websocket(websocket)
 
 
@@ -143,7 +98,6 @@ def get_processes(
     direction: str = Query("desc"),
     search: str = Query(""),
     limit: int = Query(500, ge=1, le=5000),
-    _=Depends(require_auth),
 ):
     return processes.list_processes(sort=sort, direction=direction, search=search, limit=limit)
 
@@ -153,7 +107,7 @@ class SignalBody(BaseModel):
 
 
 @app.post("/api/processes/{pid}/signal")
-def post_signal(pid: int, body: SignalBody, _=Depends(require_auth)):
+def post_signal(pid: int, body: SignalBody):
     try:
         return processes.signal_process(pid, body.action)
     except PermissionError as exc:
@@ -164,12 +118,12 @@ def post_signal(pid: int, body: SignalBody, _=Depends(require_auth)):
 
 # --------------------------------------------------------------------------- services
 @app.get("/api/services")
-def get_services(_=Depends(require_auth)):
+def get_services():
     return services.list_services()
 
 
 @app.get("/api/services/{unit}/logs")
-def get_service_logs(unit: str, lines: int = Query(200, ge=1, le=2000), _=Depends(require_auth)):
+def get_service_logs(unit: str, lines: int = Query(200, ge=1, le=2000)):
     try:
         return services.service_logs(unit, lines)
     except (RuntimeError, ValueError) as exc:
@@ -177,7 +131,7 @@ def get_service_logs(unit: str, lines: int = Query(200, ge=1, le=2000), _=Depend
 
 
 @app.get("/api/services/{unit}/status")
-def get_service_status(unit: str, _=Depends(require_auth)):
+def get_service_status(unit: str):
     try:
         return services.service_status(unit)
     except (RuntimeError, ValueError) as exc:
@@ -189,7 +143,7 @@ class ServiceActionBody(BaseModel):
 
 
 @app.post("/api/services/{unit}/action")
-def post_service_action(unit: str, body: ServiceActionBody, _=Depends(require_auth)):
+def post_service_action(unit: str, body: ServiceActionBody):
     try:
         return services.service_action(unit, body.action)
     except (RuntimeError, ValueError) as exc:
@@ -198,19 +152,19 @@ def post_service_action(unit: str, body: ServiceActionBody, _=Depends(require_au
 
 # --------------------------------------------------------------------------- self-update
 @app.get("/api/update/status")
-def get_update_status(_=Depends(require_auth)):
+def get_update_status():
     return updater.status()
 
 
 @app.post("/api/update/check")
-def post_update_check(_=Depends(require_auth)):
+def post_update_check():
     updater.check_for_updates(fetch=True)
     # Same shape as /api/update/status so the client can render either response.
     return updater.status()
 
 
 @app.post("/api/update/run")
-def post_update_run(_=Depends(require_auth)):
+def post_update_run():
     try:
         return updater.run_update()
     except RuntimeError as exc:
@@ -218,14 +172,14 @@ def post_update_run(_=Depends(require_auth)):
 
 
 @app.post("/api/update/clear-log")
-def post_update_clear_log(_=Depends(require_auth)):
+def post_update_clear_log():
     updater.clear_log()
     return {"ok": True}
 
 
 # --------------------------------------------------------------------------- files
 @app.get("/api/files")
-def get_files(path: str = Query("/"), _=Depends(require_auth)):
+def get_files(path: str = Query("/")):
     try:
         return files.list_directory(path)
     except PermissionError as exc:
@@ -235,12 +189,12 @@ def get_files(path: str = Query("/"), _=Depends(require_auth)):
 
 
 @app.get("/api/files/bookmarks")
-def get_bookmarks(_=Depends(require_auth)):
+def get_bookmarks():
     return {"bookmarks": files.bookmarks()}
 
 
 @app.get("/api/files/read")
-def get_file_read(path: str = Query(...), _=Depends(require_auth)):
+def get_file_read(path: str = Query(...)):
     try:
         return files.read_file(path)
     except PermissionError as exc:
@@ -250,7 +204,7 @@ def get_file_read(path: str = Query(...), _=Depends(require_auth)):
 
 
 @app.get("/api/files/download")
-def download_file(path: str = Query(...), _=Depends(require_auth)):
+def download_file(path: str = Query(...)):
     try:
         info = files.download_info(path)
     except (files.PathError, FileNotFoundError) as exc:
@@ -266,7 +220,7 @@ class WriteBody(BaseModel):
 
 
 @app.post("/api/files/write")
-def post_write(body: WriteBody, _=Depends(require_auth)):
+def post_write(body: WriteBody):
     try:
         return files.write_file(body.path, body.content)
     except PermissionError as exc:
@@ -278,7 +232,7 @@ class MkdirBody(BaseModel):
 
 
 @app.post("/api/files/mkdir")
-def post_mkdir(body: MkdirBody, _=Depends(require_auth)):
+def post_mkdir(body: MkdirBody):
     try:
         return files.mkdir(body.path)
     except PermissionError as exc:
@@ -291,7 +245,7 @@ class DeleteBody(BaseModel):
 
 
 @app.post("/api/files/delete")
-def post_delete(body: DeleteBody, _=Depends(require_auth)):
+def post_delete(body: DeleteBody):
     try:
         return files.delete(body.path, body.recursive)
     except PermissionError as exc:
@@ -304,7 +258,7 @@ class RenameBody(BaseModel):
 
 
 @app.post("/api/files/rename")
-def post_rename(body: RenameBody, _=Depends(require_auth)):
+def post_rename(body: RenameBody):
     try:
         return files.rename(body.path, body.new_name)
     except PermissionError as exc:
@@ -317,7 +271,7 @@ class ChmodBody(BaseModel):
 
 
 @app.post("/api/files/chmod")
-def post_chmod(body: ChmodBody, _=Depends(require_auth)):
+def post_chmod(body: ChmodBody):
     try:
         return files.chmod(body.path, body.mode)
     except PermissionError as exc:
@@ -331,7 +285,7 @@ class ChownBody(BaseModel):
 
 
 @app.post("/api/files/chown")
-def post_chown(body: ChownBody, _=Depends(require_auth)):
+def post_chown(body: ChownBody):
     try:
         return files.chown(body.path, body.owner, body.group)
     except PermissionError as exc:
@@ -342,7 +296,6 @@ def post_chown(body: ChownBody, _=Depends(require_auth)):
 async def post_upload(
     path: str = Form(...),
     file: UploadFile = File(...),
-    _=Depends(require_auth),
 ):
     data = await file.read()
     try:
@@ -372,8 +325,6 @@ def main() -> None:
   │  Headless Server Web UI                          │
   ├──────────────────────────────────────────────────┤
   │  URL        http://{config.HOST}:{config.PORT:<27}│
-  │  Username   {config.USERNAME:<33}│
-  │  Password   {config.PASSWORD:<33}│
   │  File root  {str(config.FILE_ROOT)[:33]:<33}│
   └──────────────────────────────────────────────────┘
 """
